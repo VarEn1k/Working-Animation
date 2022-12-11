@@ -1,14 +1,16 @@
-import * as THREE from 'three'
-import {VRButton} from "three/examples/jsm/webxr/VRButton"
-import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
-import {DRACOLoader} from "three/examples/jsm/loaders/DRACOLoader"
+import * as THREE from '../libs/three124/three.module'
+import {VRButton} from "../libs/three124/jsm/VRButton.js"
+import {GLTFLoader} from "../libs/three124/jsm/GLTFLoader";
+import {DRACOLoader} from "../libs/three124/jsm/DRACOLoader"
 
 import blimp from "../assets/Blimp.glb"
 import chair from "../assets/medieval-chair.glb"
-import {XRHandModelFactory} from "three/examples/jsm/webxr/XRHandModelFactory";
-import {XRControllerModelFactory} from "three/examples/jsm/webxr/XRControllerModelFactory";
+import {XRHandModelFactory} from "../libs/three124/jsm/XRHandModelFactory";
+import {XRControllerModelFactory} from "../libs/three124/jsm/XRControllerModelFactory";
 import fork from "../assets/Fork.glb"
 import monster from "../assets/monster.glb"
+import knight from "../src/knight.glb"
+import {LoadingBar} from "../libs/LoadingBar";
 
 
 
@@ -23,10 +25,14 @@ import monster from "../assets/monster.glb"
      object: null,
      initialScale: 1
    };
+   clock = new THREE.Clock();
    spheres = []
    hand1
    hand2
    SphereRadius = 0.05
+   world;
+   gltf;
+   loadingBar;
 
   constructor() {
     const container = document.createElement('div')
@@ -52,7 +58,7 @@ import monster from "../assets/monster.glb"
     this.renderer.outputEncoding = THREE.sRGBEncoding
     container.appendChild(this.renderer.domElement)
 
-
+    this.loadingBar = new LoadingBar();
     this.initScene()
     this.setupVR()
 
@@ -64,6 +70,8 @@ import monster from "../assets/monster.glb"
 
 
   initScene() {
+    this.loadGLTF( knight );
+
     const self = this
 
     const geometry = new THREE.BoxBufferGeometry(.5, .5, .5)
@@ -78,54 +86,66 @@ import monster from "../assets/monster.glb"
 
     sphere.position.set(1.5, 0, 0)
 
-   /* this.loadAsset(blimp, -.5, .5, 1, scene => {
-      const scale = 5
-      scene.scale.set(scale, scale, scale)
-      self.blimp = scene
-    })
 
-    this.loadAsset(chair, .5, .5, 1, scene => {
-      const scale = 1
-      scene.scale.set(scale, scale, scale)
-      self.chair = scene
-    })*/
+    // this.loadAsset(fork, 0, 0.8, -2, scene => {
+    //   const gltfScene = this.gltf.scene
+    //   self.scene.add(gltfScene)
+    //   const scale = 0.2
+    //   scene.scale.set(scale, scale, scale)
+    //   self.fork = scene
+    // })
+    //
+    // this.loadAsset(monster, 0.8, 0.8, -1, scene => {
+    //   const gltfScene = this.gltf.scene
+    //   self.scene.add(gltfScene)
+    //   const scale = 0.5
+    //   scene.scale.set(scale, scale, scale)
+    //   self.monster = scene
+    // })
 
-
-    this.loadAsset(fork, 0, 0.8, -2, scene => {
-      const scale = 0.2
-      scene.scale.set(scale, scale, scale)
-      self.fork = scene
-    })
-
-    this.loadAsset(monster, 0.8, 0.8, -1, scene => {
-      const scale = 0.5
-      scene.scale.set(scale, scale, scale)
-      self.monster = scene
-    })
-
-  }
-
-  loadAsset(gltfFilename, x, y, z, sceneHandler) {
-    const self = this
-    const loader = new GLTFLoader()
-    // Provide a DRACOLoader instance to decode compressed mesh data
-    const draco = new DRACOLoader()
-    draco.setDecoderPath('draco/')
-    loader.setDRACOLoader(draco)
-
-    loader.load(gltfFilename, (gltf) => {
-          const gltfScene = gltf.scene
-          self.scene.add(gltfScene)
-          gltfScene.position.set(x, y, z)
-          if (sceneHandler) {
-            sceneHandler(gltfScene)
-          }
-        },
-        null,
-        (error) => console.error(`An error happened: ${error}`)
-    )
+    // this.loadAsset(this.knight, gltf => {
+    //   const gltfScene = gltf.scene.children[3]
+    //   gltfScene.position.set(0, 0, -1.5)
+    //
+    //   self.knight = gltfScene
+    //   const scale = 0.01;
+    //   self.knight.scale.set(scale, scale, scale);
+    //
+    //   self.scene.add(gltfScene)
+    //
+    //   // animations
+    //   self.animations = {};
+    //
+    //   gltf.animations.forEach( (anim)=>{
+    //     self.animations[anim.name] = anim;
+    //   })
+    //
+    //   self.mixer = new THREE.AnimationMixer(self.knight)
+    //   // self.action = "Dance";
+    //   // self.action = "Idle";
+    //   self.action = "walk";
+    // })
 
   }
+
+   loadAsset(gltfFilename,sceneHandler) {
+     const loader = new GLTFLoader()
+     // Provide a DRACOLoader instance to decode compressed mesh data
+     const draco = new DRACOLoader()
+     draco.setDecoderPath('draco/')
+     loader.setDRACOLoader(draco)
+
+     loader.load(gltfFilename, (gltf) => {
+
+           if (sceneHandler) {
+             sceneHandler(gltf)
+           }
+         },
+         null,
+         (error) => console.error(`An error happened: ${error}`)
+     )
+   }
+
 
   /*changeAngle(handedness) {
     if (this.fork) {
@@ -142,51 +162,75 @@ import monster from "../assets/monster.glb"
     }
   }*/
 
+   set action(name){
+     if (this.actionName === name) return;
 
+     const clip = this.animations[name];
+
+     if (clip !== undefined) {
+       const action = this.mixer.clipAction(clip);
+
+       if (name === 'kick') {
+         action.loop = THREE.LoopOnce;
+         action.clampWhenFinished = true;
+       }
+
+       this.actionName = name;
+       if (this.curAction) this.curAction.crossFadeTo(action, 4);
+
+       action.enabled = true;
+       action.play();
+
+       this.curAction = action;
+     }
+   }
 
 
 
   setupVR() {
     this.renderer.xr.enabled = true
     document.body.appendChild(VRButton.createButton(this.renderer))
-   /* const grip = this.renderer.xr.getControllerGrip(0)
+    const grip = this.renderer.xr.getControllerGrip(0)
     grip.add(new XRControllerModelFactory().createControllerModel(grip))
     this.scene.add(grip)
     const grip2 = this.renderer.xr.getControllerGrip(1)
     grip2.add(new XRControllerModelFactory().createControllerModel(grip2))
     this.scene.add(grip2)
-*/
 
-    const hand1 = this.renderer.xr.getHand(0)
-    hand1.add (new XRHandModelFactory().createHandModel(hand1, "mesh"))
-    this.scene.add(hand1)
+    // const hand1 = this.renderer.xr.getHand(0)
+    // hand1.add (new XRHandModelFactory().createHandModel(hand1, "mesh"))
+    // this.scene.add(hand1)
     // hand1.addEventListener('selectstart',  evt => {
     //   self.changeAngle.bind(self, evt.handedness ).call();
     // } )
 
-    const hand2 = this.renderer.xr.getHand(1)
-    hand2.add (new XRHandModelFactory().createHandModel(hand2, "mesh"))
-    this.scene.add(hand2)
+    // const hand2 = this.renderer.xr.getHand(1)
+    // hand2.add (new XRHandModelFactory().createHandModel(hand2, "mesh"))
+    // this.scene.add(hand2)
 
-    this.hand1 = hand1
-    this.hand2 = hand2
+    // this.hand1 = hand1
+    // this.hand2 = hand2
+    this.grip = grip
+    this.grip2 = grip2
 
 
     const self = this
 
-    hand1.addEventListener( 'pinchstart', event => {
-      self.onPinchStartLeft.bind(self, event).call()
-    } );
-    hand1.addEventListener( 'pinchend', () => {
-      self.scaling.active = false;
-    } );
+    // hand1.addEventListener( 'pinchstart', event => {
+    //   self.onPinchStartLeft.bind(self, event).call()
+    // } );
+    // hand1.addEventListener( 'pinchend', () => {
+    //   self.scaling.active = false;
+    // } );
+    //
+    // hand2.addEventListener( 'pinchstart', (event) => {
+    //   self.onPinchStartRight.bind(self, event).call()
+    // } );
+    // hand2.addEventListener( 'pinchend',  (event) => {
+    //   self.onPinchEndRight.bind(self, event).call()
+    // } )
 
-    hand2.addEventListener( 'pinchstart', (event) => {
-      self.onPinchStartRight.bind(self, event).call()
-    } );
-    hand2.addEventListener( 'pinchend',  (event) => {
-      self.onPinchEndRight.bind(self, event).call()
-    } )
+    this.addActions()
   }
 
    onPinchStartLeft( event ) {
@@ -289,6 +333,78 @@ import monster from "../assets/monster.glb"
 
    }
 
+   addActions() {
+     const self = this;
+
+     this.grip.addEventListener('selectstart', () => {
+       self.action = 'jump'
+     })
+
+     this.grip.addEventListener('squeezestart', () => {
+       self.action = 'walk'
+     })
+
+     this.grip2.addEventListener('selectstart', () => {
+       self.action = 'dance'
+     })
+
+     this.grip2.addEventListener('squeezestart', () => {
+       self.action = 'kick'
+     })
+
+
+   }
+
+   loadGLTF(filename){
+     const loader = new GLTFLoader( );
+     const dracoLoader = new DRACOLoader();
+     dracoLoader.setDecoderPath( 'draco/' );
+     loader.setDRACOLoader( dracoLoader );
+
+     const self = this;
+
+     // Load a glTF resource
+     loader.load(
+         // resource URL
+         filename,
+         // called when the resource is loaded
+         function ( gltf ) {
+           self.animations = {};
+
+           gltf.animations.forEach( (anim)=>{
+             self.animations[anim.name] = anim;
+           })
+
+           self.knight = gltf.scene.children[3];
+
+           self.mixer = new THREE.AnimationMixer( self.knight )
+
+           self.scene.add( self.knight );
+
+           self.loadingBar.visible = false;
+
+           self.knight.position.set(0, 0, -1.5)
+           const scale = 0.01;
+           self.knight.scale.set(scale, scale, scale);
+           self.action = "Idle";
+
+           self.renderer.setAnimationLoop( self.render.bind(self) );
+         },
+         // called while loading is progressing
+         function ( xhr ) {
+
+           self.loadingBar.progress = (xhr.loaded / xhr.total);
+
+         },
+         // called when loading has errors
+         function ( error ) {
+
+           console.log( 'An error happened' );
+
+         }
+     );
+   }
+
   resize() {
     this.camera.aspect = window.innerWidth / window.innerHeight
     this.camera.updateProjectionMatrix()
@@ -296,6 +412,16 @@ import monster from "../assets/monster.glb"
   }
 
   render() {
+
+    const delta = this.clock.getDelta();
+    // const elapsedTime = this.clock.elapsedTime;
+    // this.renderer.xr.updateCamera(this.camera);
+    // this.world.execute(delta, elapsedTime);
+    this.renderer.render(this.scene, this.camera);
+
+    if (this.mixer) {
+      this.mixer.update(delta)
+    }
 
     if ( this.scaling.active ) {
 
