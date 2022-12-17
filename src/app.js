@@ -383,7 +383,7 @@ import {LoadingBar} from "../libs/LoadingBar";
 
            self.loadingBar.visible = false;
 
-           self.knight.position.set(0, 0, -1.5)
+           self.knight.position.set(0, 0.5, -1.5)
            const scale = 0.01;
            self.knight.scale.set(scale, scale, scale);
            self.action = "Idle";
