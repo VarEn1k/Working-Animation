@@ -387,6 +387,7 @@ import {LoadingBar} from "../libs/LoadingBar";
      );
    }
 
+
   resize() {
     this.camera.aspect = window.innerWidth / window.innerHeight
     this.camera.updateProjectionMatrix()
