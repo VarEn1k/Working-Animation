@@ -13,7 +13,6 @@ import knight from "../src/knight.glb"
 import {LoadingBar} from "../libs/LoadingBar";
 
 
-
  class App {
    tmpVector1 = new THREE.Vector3()
    tmpVector2 = new THREE.Vector3()
