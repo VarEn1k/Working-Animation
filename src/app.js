@@ -170,7 +170,6 @@ import {LoadingBar} from "../libs/LoadingBar";
      }
    }
 
-
   setupVR() {
     this.renderer.xr.enabled = true
     document.body.appendChild(VRButton.createButton(this.renderer))
