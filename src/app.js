@@ -147,21 +147,6 @@ import {LoadingBar} from "../libs/LoadingBar";
    }
 
 
-  /*changeAngle(handedness) {
-    if (this.fork) {
-      this.fork.rotateY(45)
-
-    }
-  }
-
-  changePosition(handedness) {
-    if (this.monster) {
-      const pos = this.monster.position
-      this.monster.position.set(pos.x - .5, pos.y, pos.z)
-
-    }
-  }*/
-
    set action(name){
      if (this.actionName === name) return;
 
